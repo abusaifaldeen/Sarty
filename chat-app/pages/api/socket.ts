@@ -31,14 +31,20 @@ export default function handler(
     res.socket.server.io = io;
 
     io.on("connection", (socket) => {
-      console.log("a user connected");
+      console.log(`A user connected: ${socket.id}`);
 
-      socket.on("send-message", (msg: string) => {
-        io.emit("new-message", msg);
+      socket.on("join-room", (roomId: string) => {
+        socket.join(roomId);
+        console.log(`User ${socket.id} joined room ${roomId}`);
+      });
+
+      socket.on("send-message", (data: { roomId: string; message: string }) => {
+        // Broadcast to everyone in the room except the sender
+        socket.broadcast.to(data.roomId).emit("new-message", data.message);
       });
 
       socket.on("disconnect", () => {
-        console.log("user disconnected");
+        console.log(`User disconnected: ${socket.id}`);
       });
     });
   }
