@@ -12,6 +12,7 @@ import VisitorsPanel from "@/app/components/VisitorsPanel";
 import RoomsPanel from "@/app/components/RoomsPanel";
 import Header from "@/app/components/Header";
 import { dataService } from "@/lib/dataService";
+import { useAuth } from "@/lib/AuthContext";
 import styles from './ChatRoom.module.css';
 
 let socket;
@@ -25,6 +26,7 @@ interface Message {
 export default function ChatRoomPage() {
   const params = useParams();
   const roomId = params.roomId as string;
+  const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [visitorCount, setVisitorCount] = useState(0);
@@ -34,7 +36,7 @@ export default function ChatRoomPage() {
 
   useEffect(() => {
     async function fetchDataAndInitSocket() {
-      if (roomId) {
+      if (roomId && user) {
         try {
           // Fetch initial data
           const [initialMessages, onlineUsers] = await Promise.all([
@@ -53,11 +55,11 @@ export default function ChatRoomPage() {
             socket.emit("join-room", roomId);
           });
 
-          socket.on("new-message", (message: string) => {
+          socket.on("new-message", (data: { message: string, sender_id: string }) => {
             const newMessage: Message = {
               id: `msg-${Date.now()}`,
-              content: message,
-              sender_id: "some_user",
+              content: data.message,
+              sender_id: data.sender_id,
             };
             setMessages((prev) => [...prev, newMessage]);
           });
@@ -74,17 +76,17 @@ export default function ChatRoomPage() {
     return () => {
       if (socket) socket.disconnect();
     };
-  }, [roomId]);
+  }, [roomId, user]);
 
   const handleSendMessage = (message: string) => {
-    if (message && roomId) {
+    if (message && roomId && user) {
       const newMessage: Message = {
         id: `msg-${Date.now()}`,
         content: message,
-        sender_id: "me",
+        sender_id: user.id,
       };
       setMessages((prev) => [...prev, newMessage]);
-      socket.emit("send-message", { roomId, message });
+      socket.emit("send-message", { roomId, message, sender_id: user.id });
     }
   };
 

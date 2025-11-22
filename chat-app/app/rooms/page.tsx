@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { dataService } from "@/lib/dataService";
 import Link from 'next/link';
+import { useAuth } from "@/lib/AuthContext";
 
 interface Room {
   id: string;
@@ -11,6 +12,7 @@ interface Room {
 }
 
 export default function RoomsPage() {
+  const { user } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [newRoomName, setNewRoomName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -31,10 +33,9 @@ export default function RoomsPage() {
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newRoomName.trim()) {
+    if (newRoomName.trim() && user) {
       try {
-        // Mock owner_id, this would come from the logged-in user session
-        const newRoom = await dataService.createRoom(newRoomName, "mock_user_id");
+        const newRoom = await dataService.createRoom(newRoomName, user.id);
         setRooms([...rooms, newRoom]);
         setNewRoomName("");
       } catch (error) {
@@ -53,7 +54,6 @@ export default function RoomsPage() {
       <ul>
         {rooms.map((room) => (
           <li key={room.id}>
-            {/* The chat room page will be created in a later step */}
             <Link href={`/chat/${room.id}`}>{room.name}</Link>
           </li>
         ))}
