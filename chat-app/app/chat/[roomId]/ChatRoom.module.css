@@ -1,0 +1,22 @@
+
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+.mainContent {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+
+.messageDisplayWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.bottomBar {
+  border-top: 1px solid #ccc;
+}

@@ -19,7 +19,18 @@ const mockMessages = {
   r3: [],
 };
 
+const mockUsers = [
+  { id: "u1", name: "Alice", avatar: "👩‍🦰", country: "🇸🇦", status: "Online" },
+  { id: "u2", name: "Bob", avatar: "👨‍💻", country: "🇦🇪", status: "Away" },
+  { id: "u3", name: "Charlie", avatar: "🧑‍🎨", country: "🇰🇼", status: "Online" },
+];
+
 export const dataService = {
+  async getOnlineUsers() {
+    console.log("Mock getOnlineUsers called");
+    return mockUsers;
+  },
+
   async getPublicRooms() {
     console.log("Mock getPublicRooms called");
     return mockRooms.filter(room => room.type === 'public');
