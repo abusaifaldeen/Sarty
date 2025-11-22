@@ -3,20 +3,27 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: relative;
+}
+
+.welcomeBar {
+  background-color: #f8f9fa;
+  text-align: center;
+  padding: 5px;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .mainContent {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
 .messageDisplayWrapper {
-  flex: 1;
-  overflow-y: auto;
+  height: 100%;
 }
 
 .bottomBar {
-  border-top: 1px solid #ccc;
+  display: flex;
+  padding: 1rem;
+  border-top: 1px solid #dee2e6;
 }
