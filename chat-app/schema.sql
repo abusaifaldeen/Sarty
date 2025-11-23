@@ -1,34 +1,16 @@
--- Create Users table
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    avatar_url VARCHAR(255),
-    role VARCHAR(50) NOT NULL DEFAULT 'Member',
-    status VARCHAR(50) DEFAULT 'offline',
-    level INT DEFAULT 1,
-    points INT DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+-- ... (كل محتوى SQL الحالي)
+
+-- User Settings Table
+CREATE TABLE user_settings (
+    -- ...
 );
 
--- Create Rooms table
-CREATE TABLE rooms (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL DEFAULT 'public',
-    owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Create Messages table
-CREATE TABLE messages (
-    id BIGSERIAL PRIMARY KEY,
-    room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL DEFAULT 'text',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- Indexes for performance optimization
+CREATE INDEX idx_messages_room_id ON messages(room_id);
+CREATE INDEX idx_messages_sender_id ON messages(sender_id);
+CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_private_messages_sender_id ON private_messages(sender_id);
+CREATE INDEX idx_private_messages_receiver_id ON private_messages(receiver_id);
+CREATE INDEX idx_wall_posts_user_id ON wall_posts(user_id);

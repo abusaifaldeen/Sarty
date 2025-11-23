@@ -3,129 +3,64 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import io from "socket.io-client";
+import { useSocket } from "@/lib/SocketContext"; // استخدام السياق الجديد
 import MessageDisplay from "@/app/components/MessageDisplay";
-import MessageInput from "@/app/components/MessageInput";
-import Toolbar from "@/app/components/Toolbar";
-import SidePanel from "@/app/components/SidePanel";
-import VisitorsPanel from "@/app/components/VisitorsPanel";
-import RoomsPanel from "@/app/components/RoomsPanel";
-import Header from "@/app/components/Header";
-import { dataService } from "@/lib/dataService";
-import styles from './ChatRoom.module.css';
-
-let socket;
-
-interface Message {
-  id: string;
-  content: string;
-  sender_id: string;
-}
+// ... (بقية الاستيرادات)
+import { Message } from "@/lib/types";
 
 export default function ChatRoomPage() {
   const params = useParams();
   const roomId = params.roomId as string;
+  const { user } = useAuth();
+  const { socket, isConnected } = useSocket(); // الحصول على السوكيت من السياق
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [visitorCount, setVisitorCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [isSidePanelOpen, setSidePanelOpen] = useState(false);
-  const [sidePanelContent, setSidePanelContent] = useState<string | null>(null);
+  // ... (بقية الحالات)
 
   useEffect(() => {
-    async function fetchDataAndInitSocket() {
-      if (roomId) {
+    async function fetchInitialData() {
+      if (roomId && user) {
         try {
-          // Fetch initial data
-          const [initialMessages, onlineUsers] = await Promise.all([
-            dataService.getMessages(roomId),
-            dataService.getOnlineUsers(),
-          ]);
-          setMessages(initialMessages);
-          setVisitorCount(onlineUsers.length);
-
-          // Initialize Socket.IO
-          await fetch("/api/socket");
-          socket = io({ path: "/api/socket_io" });
-
-          socket.on("connect", () => {
-            console.log("Connected to socket server");
-            socket.emit("join-room", roomId);
-          });
-
-          socket.on("new-message", (message: string) => {
-            const newMessage: Message = {
-              id: `msg-${Date.now()}`,
-              content: message,
-              sender_id: "some_user",
-            };
-            setMessages((prev) => [...prev, newMessage]);
-          });
-
+          const initialMessages = await dataService.getMessages(roomId);
+          setMessages(initialMessages as Message[]);
         } catch (error) {
-          console.error("Failed to fetch initial data or init socket:", error);
+          console.error("فشل في جلب البيانات الأولية:", error);
         } finally {
           setLoading(false);
         }
       }
     }
-    fetchDataAndInitSocket();
+    fetchInitialData();
+  }, [roomId, user]);
 
-    return () => {
-      if (socket) socket.disconnect();
-    };
-  }, [roomId]);
+  useEffect(() => {
+    if (socket) {
+      // الانضمام للغرفة عند توفر السوكيت
+      socket.emit("join-room", roomId);
 
-  const handleSendMessage = (message: string) => {
-    if (message && roomId) {
-      const newMessage: Message = {
-        id: `msg-${Date.now()}`,
-        content: message,
-        sender_id: "me",
+      // تعريف المستمعين
+      const handleNewMessage = (data: { message: string, sender_id: string }) => {
+        // ... (إضافة رسالة جديدة)
       };
-      setMessages((prev) => [...prev, newMessage]);
-      socket.emit("send-message", { roomId, message });
+      const handleMessageDeleted = (data: { messageId: number }) => {
+        // ... (حذف رسالة)
+      };
+      const handleReconnect = () => {
+        window.location.reload();
+      };
+
+      socket.on("new-message", handleNewMessage);
+      socket.on("message-deleted", handleMessageDeleted);
+      socket.on('reconnect-now', handleReconnect);
+
+      // إزالة المستمعين عند تفكيك المكون
+      return () => {
+        socket.off("new-message", handleNewMessage);
+        socket.off("message-deleted", handleMessageDeleted);
+        socket.off('reconnect-now', handleReconnect);
+      };
     }
-  };
+  }, [socket, roomId]);
 
-  const handleToolbarClick = (content: string) => {
-    setSidePanelContent(content);
-    setSidePanelOpen(true);
-  };
-
-  const renderSidePanelContent = () => {
-    switch (sidePanelContent) {
-      case "Visitors":
-        return <VisitorsPanel />;
-      case "Rooms":
-        return <RoomsPanel />;
-      default:
-        return <h2>{sidePanelContent}</h2>;
-    }
-  };
-
-  if (loading) return <p>Loading chat...</p>;
-
-  return (
-    <div className={styles.chatContainer}>
-      <Header />
-      <div className={styles.mainContent}>
-        <div className={styles.messageDisplayWrapper}>
-           <MessageDisplay messages={messages} />
-        </div>
-      </div>
-
-      <div className={styles.bottomBar}>
-        <Toolbar onButtonClick={handleToolbarClick} visitorCount={visitorCount} />
-        <MessageInput onSendMessage={handleSendMessage} />
-      </div>
-
-      <SidePanel
-        isOpen={isSidePanelOpen}
-        onClose={() => setSidePanelOpen(false)}
-      >
-        {renderSidePanelContent()}
-      </SidePanel>
-    </div>
-  );
+  // ... (بقية الكود)
 }
