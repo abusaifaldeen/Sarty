@@ -3,70 +3,83 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import MessageDisplay from "@/app/components/MessageDisplay";
 import MessageInput from "@/app/components/MessageInput";
 import Toolbar from "@/app/components/Toolbar";
 import SidePanel from "@/app/components/SidePanel";
 import VisitorsPanel from "@/app/components/VisitorsPanel";
 import RoomsPanel from "@/app/components/RoomsPanel";
+import PrivateMessagesPanel from "@/app/components/PrivateMessagesPanel";
 import Header from "@/app/components/Header";
 import { dataService } from "@/lib/dataService";
-import styles from './ChatRoom.module.css';
+import { useAuth } from "@/lib/AuthContext";
+import { Message } from "@/lib/types"; // استيراد النوع المركزي
 
-let socket;
-
-interface Message {
-  id: string;
-  content: string;
-  sender_id: string;
-}
+let socket: Socket;
 
 export default function ChatRoomPage() {
   const params = useParams();
   const roomId = params.roomId as string;
+  const { user, session } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [visitorCount, setVisitorCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [socketError, setSocketError] = useState<string | null>(null);
   const [isSidePanelOpen, setSidePanelOpen] = useState(false);
   const [sidePanelContent, setSidePanelContent] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDataAndInitSocket() {
-      if (roomId) {
+      if (roomId && user && session) {
         try {
-          // Fetch initial data
           const [initialMessages, onlineUsers] = await Promise.all([
             dataService.getMessages(roomId),
             dataService.getOnlineUsers(),
           ]);
-          setMessages(initialMessages);
+          setMessages(initialMessages as Message[]);
           setVisitorCount(onlineUsers.length);
 
-          // Initialize Socket.IO
           await fetch("/api/socket");
-          socket = io({ path: "/api/socket_io" });
+
+          socket = io({
+            path: "/api/socket_io",
+            auth: {
+              token: session.access_token
+            }
+          });
 
           socket.on("connect", () => {
-            console.log("Connected to socket server");
+            console.log("تم الاتصال وتأكيد الهوية بنجاح.");
+            setSocketError(null);
             socket.emit("join-room", roomId);
           });
 
-          socket.on("new-message", (message: string) => {
+          socket.on('connect_error', (err) => {
+            console.error("خطأ في الاتصال:", err.message);
+            setSocketError("فشل التحقق من الهوية. لا يمكن الاتصال بالدردشة.");
+          });
+
+          socket.on("new-message", (data: { message: string, sender_id: string }) => {
             const newMessage: Message = {
               id: `msg-${Date.now()}`,
-              content: message,
-              sender_id: "some_user",
+              content: data.message,
+              sender_id: data.sender_id,
+              room_id: roomId, // إضافة room_id
+              created_at: new Date().toISOString() // إضافة الطابع الزمني
             };
             setMessages((prev) => [...prev, newMessage]);
           });
 
         } catch (error) {
-          console.error("Failed to fetch initial data or init socket:", error);
+          console.error("فشل في جلب البيانات الأولية:", error);
         } finally {
           setLoading(false);
         }
+      } else if (!session) {
+          setLoading(false);
+          setSocketError("يجب تسجيل الدخول للوصول إلى الدردشة.");
       }
     }
     fetchDataAndInitSocket();
@@ -74,14 +87,16 @@ export default function ChatRoomPage() {
     return () => {
       if (socket) socket.disconnect();
     };
-  }, [roomId]);
+  }, [roomId, user, session]);
 
   const handleSendMessage = (message: string) => {
-    if (message && roomId) {
+    if (message && roomId && user && socket && socket.connected) {
       const newMessage: Message = {
         id: `msg-${Date.now()}`,
         content: message,
-        sender_id: "me",
+        sender_id: user.id,
+        room_id: roomId,
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, newMessage]);
       socket.emit("send-message", { roomId, message });
@@ -99,27 +114,38 @@ export default function ChatRoomPage() {
         return <VisitorsPanel />;
       case "Rooms":
         return <RoomsPanel />;
+      case "Private":
+        return <PrivateMessagesPanel />;
       default:
         return <h2>{sidePanelContent}</h2>;
     }
   };
 
-  if (loading) return <p>Loading chat...</p>;
+  if (loading) return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-lg">جاري تحميل الدردشة...</p>
+      </div>
+  );
+
+  if (socketError) return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <p className="text-lg text-red-500">{socketError}</p>
+      </div>
+  );
 
   return (
-    <div className={styles.chatContainer}>
+    <div className="flex h-screen flex-col">
       <Header />
-      <div className={styles.mainContent}>
-        <div className={styles.messageDisplayWrapper}>
-           <MessageDisplay messages={messages} />
-        </div>
+      <div className="bg-gray-100 p-2 text-center">
+        <p>أهلاً بك، {user?.email || "زائر"}!</p>
       </div>
-
-      <div className={styles.bottomBar}>
+      <main className="flex-grow overflow-y-auto bg-gray-50 p-4">
+        <MessageDisplay messages={messages} />
+      </main>
+      <footer className="bg-white p-2 shadow-inner">
         <Toolbar onButtonClick={handleToolbarClick} visitorCount={visitorCount} />
         <MessageInput onSendMessage={handleSendMessage} />
-      </div>
-
+      </footer>
       <SidePanel
         isOpen={isSidePanelOpen}
         onClose={() => setSidePanelOpen(false)}

@@ -1,16 +1,24 @@
 
-import Link from 'next/link';
+"use client";
+
+import HeaderBanner from './components/HeaderBanner';
+import NavigationTabs from './components/NavigationTabs';
+import LoginArea from './components/LoginArea';
+import OnlineUsersList from './components/OnlineUsersList';
+import Footer from './components/Footer';
 
 export default function HomePage() {
   return (
-    <div>
-      <h1>Welcome to the Chat App</h1>
-      <p>
-        <Link href="/rooms">Browse Public Rooms</Link>
-      </p>
-      <p>
-        <Link href="/login">Login</Link> or <Link href="/signup">Sign Up</Link>
-      </p>
+    <div className="bg-gray-50 min-h-screen">
+      <HeaderBanner />
+      <NavigationTabs />
+
+      <main className="container mx-auto px-4 py-8">
+        <LoginArea />
+        <OnlineUsersList />
+      </main>
+
+      <Footer />
     </div>
   );
 }

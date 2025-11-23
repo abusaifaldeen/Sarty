@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import styles from './MessageInput.module.css';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -20,16 +19,20 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
+    <form onSubmit={handleSubmit} className="mt-2 flex">
       <input
         type="text"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type your message..."
-        className={styles.input}
+        placeholder="اكتب رسالتك..."
+        className="flex-grow rounded-l-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <button type="submit" className={styles.button}>
-        Send
+      <button
+        type="submit"
+        className="rounded-r-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+        disabled={!message.trim()}
+      >
+        إرسال
       </button>
     </form>
   );
