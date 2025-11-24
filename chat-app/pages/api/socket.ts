@@ -38,9 +38,9 @@ export default function handler(
         console.log(`User ${socket.id} joined room ${roomId}`);
       });
 
-      socket.on("send-message", (data: { roomId: string; message: string }) => {
+      socket.on("send-message", (data: { roomId: string; message: string, sender_id: string }) => {
         // Broadcast to everyone in the room except the sender
-        socket.broadcast.to(data.roomId).emit("new-message", data.message);
+        socket.broadcast.to(data.roomId).emit("new-message", data);
       });
 
       socket.on("disconnect", () => {
